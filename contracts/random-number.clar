@@ -60,7 +60,14 @@
         ;; set the chose id for the filter function
         (var-set last-id chosen-token-id)
         ;; remove the chosen-id from the list of available token-ids
-        (var-set token-ids (unwrap-panic (as-max-len? (filter is-token-id tokens) u100)))
+        (var-set token-ids
+            (unwrap-panic
+                (as-max-len?
+                    (filter is-token-id tokens)
+                    u100
+                )
+            )
+        )
         (ok chosen-token-id)
     )
 )

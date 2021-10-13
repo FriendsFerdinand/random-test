@@ -6,6 +6,15 @@ name = "random-number"
 contract_id = "SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait"
 
 costs_version = 1
+
 [contracts.random-number]
 path = "contracts/random-number.clar"
+
+[contracts.bigger-random-number]
+path = "contracts/bigger-random-number.clar"
+
+[contracts.fast-big-random]
+path = "contracts/fast-big-random.clar"
+
+
 depends_on = []

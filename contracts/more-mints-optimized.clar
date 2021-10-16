@@ -1,5 +1,6 @@
 
 
+
 (define-public (mint)
     (let (
         (remaining-ids (var-get remaining))
@@ -15,7 +16,7 @@
 (define-map chosen-ids uint uint)
 (define-data-var remaining uint u300)
 (define-data-var last-block uint u0)
-(define-data-var last-vrf (buff 64) 0x00)
+(define-data-var last-vrf (buff 128) 0x00)
 
 (define-constant BUFF_TO_BYTE (list
     0x00 0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09 0x0a 0x0b 0x0c 0x0d 0x0e 0x0f
@@ -39,7 +40,16 @@
 (define-data-var b-idx uint u0)
 
 (define-private (set-vrf)
-    (var-set last-vrf (sha512 (unwrap-panic (get-block-info? vrf-seed (- block-height u1)))))
+    (let (
+        (seed (unwrap-panic (get-block-info? vrf-seed (- block-height u1))))
+        )
+        (var-set last-vrf
+            (concat
+                (sha512 (unwrap-panic (element-at seed u0)))
+                (sha512 (unwrap-panic (element-at seed u1)))
+            )
+        )
+    )
 )
 
 (define-read-only (rand (byte-idx uint))
@@ -68,7 +78,7 @@
          )
         (if (is-eq (var-get last-block) block-height)
             (begin
-                (asserts! (< byte-idx u62) (err u502))
+                (asserts! (< byte-idx u126) (err u502)) ;; We ran out of random numbers, try again next block
                 (let (
                     (picked-idx (mod (rand byte-idx) remaining-ids))
                     (picked-id (default-to picked-idx (map-get? chosen-ids picked-idx)))

@@ -92,6 +92,12 @@
     (not (is-eq last-val (var-get last-id)))
 )
 
+(define-read-only (get-random-val-at (pos uint))
+    (let ((seed (sha512 (unwrap-panic (get-block-info? vrf-seed (- block-height u1))))))
+        (unwrap-panic (index-of BUFF_TO_BYTE (unwrap-panic (element-at seed pos))))
+    )
+)
+
 
 
 (define-constant BUFF_TO_BYTE (list

@@ -1,4 +1,3 @@
-(define-constant MAX_MINT u100)
 (define-map chosen-ids uint uint)
 (define-data-var remaining uint u100)
 (define-data-var current-block uint block-height)
@@ -22,40 +21,27 @@
     0xf0 0xf1 0xf2 0xf3 0xf4 0xf5 0xf6 0xf7 0xf8 0xf9 0xfa 0xfb 0xfc 0xfd 0xfe 0xff
 ))
 
-(define-data-var TWO_FOLDS (list 64 bool)
-    (list
-        true true 
-    )
-)
-
-;; THIS IS ONLY FOR TESTING
-;; THE REGTEST CHANGES ITS VRF AT EVERY get-block-info? CALL
-;; (define-public (set-vrf)
-    ;; (ok (var-set vrf (unwrap-panic (get-block-info? vrf-seed (- block-height u1)))))
-;;     (ok (var-set vrf 0x011cb2f154711d494c036e965bf3ef70f9619411a517edc481f5d5a9e6b1c046))
-;; )
+(define-data-var first-byte-pos uint u0)
+(define-data-var second-byte-pos uint u1)
 
 (define-read-only (get-vrf)
     (sha512 (unwrap-panic (get-block-info? vrf-seed (- block-height u1))))
 )
 
 (define-read-only (get-two-bytes)
-    (get acc (fold concat-iter (var-get TWO_FOLDS) {acc: 0x, idx: u0, full: (get-vrf) }))
+    (let ((vrf (get-vrf)))
+        (concat
+            (unwrap-panic (element-at vrf (var-get first-byte-pos)))
+            (unwrap-panic (element-at vrf (var-get second-byte-pos)))
+        )
+    )
 )
 
-(define-private (concat-iter (ignore bool) (output {acc: (buff 2), idx: uint, full: (buff 64)}))
-    (if ignore
-        {
-            acc: (unwrap-panic (as-max-len? (concat (get acc output) (unwrap-panic (element-at  (get full output) (get idx output)))) u2)),
-            idx: (+ (get idx output) u1),
-            full:  (get full output)
-        }
-        {
-            acc:  (get acc output),
-            idx: (+ (get idx output) u1),
-            full:  (get full output)
-        } 
-    )
+(define-private (concat-iter (idx uint) (output {acc: (buff 2), bytes: (buff 64)}))
+    {
+        acc: (unwrap-panic (as-max-len? (concat (get acc output) (unwrap-panic (element-at (get bytes output) idx))) u2)),
+        bytes: (get bytes output)
+    }
 )
 
 (define-read-only (get-random-number)
@@ -98,7 +84,10 @@
 )
 
 (define-private (cycle-id)
-    (var-set TWO_FOLDS (unwrap-panic (as-max-len? (concat (list false false) (var-get TWO_FOLDS)) u64)))
+    (let ((first-pos (var-get first-byte-pos)))
+        (var-set first-byte-pos (+ first-pos u2))
+        (var-set second-byte-pos (+ first-pos u3))
+    )
 )
 
 (define-public (mint)
@@ -107,14 +96,15 @@
         (let ((random-id (get-random-id)))
             (if (is-eq (var-get current-block) block-height) ;; we are still in the same block
                 (begin
-                    (asserts! (not (is-eq (len (var-get TWO_FOLDS)) u64)) (err u502)) ;; we have reached block limit, try next block
+                    (asserts! (not (is-eq (var-get second-byte-pos) u63)) (err u502)) ;; we have reached block limit, try next block
                     ;; you mint here with (nft-mint? NFT random-id tx-sender)
                     (cycle-id)
                     (ok random-id)
                 )
                 (begin ;; we are entering new block
                     (var-set current-block block-height)
-                    (var-set TWO_FOLDS (list true true)) ;; restart from the beginning
+                    (var-set first-byte-pos u0) ;; restart from the beginning
+                    (var-set second-byte-pos u1) ;; restart from the beginning
                     ;; you mint here with  (nft-mint? NFT random-id tx-sender)
                     (cycle-id)
                     (ok random-id)

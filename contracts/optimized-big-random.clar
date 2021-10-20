@@ -1,6 +1,5 @@
 
 
-
 (define-public (mint)
     (let (
         (remaining-ids (var-get remaining))
